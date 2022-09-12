@@ -832,7 +832,8 @@ namespace
  * by RocblasContractionProblem                                               *
  ******************************************************************************/
 template <typename Ti, typename To, typename Tc>
-rocblas_status runContractionProblem(const RocblasContractionProblem<Ti, To, Tc>& prob)
+rocblas_status runContractionProblem(const RocblasContractionProblem<Ti, To, Tc>& prob,
+                                     int32_t                                      solution_index)
 {
     rocblas_status                                status = rocblas_status_internal_error;
     std::shared_ptr<Tensile::ContractionSolution> solution;
@@ -851,7 +852,14 @@ rocblas_status runContractionProblem(const RocblasContractionProblem<Ti, To, Tc>
         auto  handle        = prob.handle;
         auto* fitness_query = handle->get_solution_fitness_query();
 
-        solution = library->findBestSolution(tensile_prob, *hardware, fitness_query);
+        if(solution_index > 0)
+        {
+            solution = library->getSolutionByIndex(solution_index - 1);
+        }
+        else
+        {
+            solution = library->findBestSolution(tensile_prob, *hardware, fitness_query);
+        }
 
         if(!solution)
         {
@@ -919,36 +927,47 @@ extern "C" void rocblas_initialize()
  ******************************************************************************/
 
 // Non-EX types
-template rocblas_status runContractionProblem(const RocblasContractionProblem<rocblas_half>&);
+template rocblas_status runContractionProblem(const RocblasContractionProblem<rocblas_half>&,
+                                              int32_t solution_index);
 
-template rocblas_status runContractionProblem(const RocblasContractionProblem<float>&);
+template rocblas_status runContractionProblem(const RocblasContractionProblem<float>&,
+                                              int32_t solution_index);
 
-template rocblas_status runContractionProblem(const RocblasContractionProblem<double>&);
+template rocblas_status runContractionProblem(const RocblasContractionProblem<double>&,
+                                              int32_t solution_index);
 
 template rocblas_status
-    runContractionProblem(const RocblasContractionProblem<rocblas_float_complex>&);
+    runContractionProblem(const RocblasContractionProblem<rocblas_float_complex>&,
+                          int32_t solution_index);
 
 template rocblas_status
-    runContractionProblem(const RocblasContractionProblem<rocblas_double_complex>&);
+    runContractionProblem(const RocblasContractionProblem<rocblas_double_complex>&,
+                          int32_t solution_index);
 
 // EX types
 template rocblas_status
-    runContractionProblem(const RocblasContractionProblem<rocblas_half, rocblas_half, float>&);
+    runContractionProblem(const RocblasContractionProblem<rocblas_half, rocblas_half, float>&,
+                          int32_t solution_index);
 
 template rocblas_status
-    runContractionProblem(const RocblasContractionProblem<rocblas_half, float, float>&);
+    runContractionProblem(const RocblasContractionProblem<rocblas_half, float, float>&,
+                          int32_t solution_index);
 
 template rocblas_status runContractionProblem(
-    const RocblasContractionProblem<rocblas_bfloat16, rocblas_bfloat16, float>&);
+    const RocblasContractionProblem<rocblas_bfloat16, rocblas_bfloat16, float>&,
+    int32_t solution_index);
 
 template rocblas_status
-    runContractionProblem(const RocblasContractionProblem<rocblas_bfloat16, float, float>&);
+    runContractionProblem(const RocblasContractionProblem<rocblas_bfloat16, float, float>&,
+                          int32_t solution_index);
 
 template rocblas_status
-    runContractionProblem(const RocblasContractionProblem<int8_t, int32_t, int32_t>&);
+    runContractionProblem(const RocblasContractionProblem<int8_t, int32_t, int32_t>&,
+                          int32_t solution_index);
 
 template rocblas_status
-    runContractionProblem(const RocblasContractionProblem<rocblas_int8x4, int32_t, int32_t>&);
+    runContractionProblem(const RocblasContractionProblem<rocblas_int8x4, int32_t, int32_t>&,
+                          int32_t solution_index);
 
 /***********************************************************************************
  * Whether Tensile has been initialized for at least one device (used for testing) *

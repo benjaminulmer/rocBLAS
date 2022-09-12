@@ -286,6 +286,7 @@ namespace
                                                stride_d,
                                                batch_count,
                                                compute_type,
+                                               solution_index,
                                                flags);
     }
 } // namespace

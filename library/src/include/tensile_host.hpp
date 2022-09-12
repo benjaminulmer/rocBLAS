@@ -371,7 +371,8 @@ struct RocblasContractionProblem
  * runContractionProblem() solves a RocblasContractionProblem                  *
  *******************************************************************************/
 template <typename Ti, typename To, typename Tc>
-rocblas_status runContractionProblem(RocblasContractionProblem<Ti, To, Tc> const& problem);
+rocblas_status runContractionProblem(RocblasContractionProblem<Ti, To, Tc> const& problem,
+                                     int32_t solution_index = 0);
 
 /***********************************************************************************
  * Whether Tensile has been initialized for at least one device (used for testing) *
