@@ -871,6 +871,12 @@ rocblas_status runContractionProblem(const RocblasContractionProblem<Ti, To, Tc>
         {
             if(fitness_query)
                 status = rocblas_status_success;
+            else if(prob.flags & rocblas_gemm_flags_check_solution_index)
+            {
+                status = solution->canSolve(tensile_prob, *hardware)
+                             ? rocblas_status_success
+                             : rocblas_status_invalid_solution_index;
+            }
             else if(handle->is_device_memory_size_query())
             {
                 status = handle->set_optimal_device_memory_size(

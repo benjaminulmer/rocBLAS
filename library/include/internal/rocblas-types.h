@@ -40,8 +40,8 @@
 
 #if !defined(ROCBLAS_INTERNAL_API) && !defined(ROCBLAS_NO_DEPRECATED_WARNINGS)
 #define ROCBLAS_INTERNAL_DEPRECATION \
-    __attribute__((                  \
-        deprecated("rocBLAS internal API may change each release. Advise against using.")))
+    __attribute__(                   \
+        (deprecated("rocBLAS internal API may change each release. Advise against using.")))
 #else
 #define ROCBLAS_INTERNAL_DEPRECATION
 #endif
@@ -189,7 +189,8 @@ typedef enum rocblas_status_
     rocblas_status_invalid_value       = 11, /**< passed argument not valid */
     rocblas_status_continue            = 12, /**< nothing preventing function to proceed */
     rocblas_status_check_numerics_fail
-    = 13, /**< will be set if the vector/matrix has a NaN/Infinity/denormal value */
+    = 13, /**< Will be set if the vector/matrix has a NaN/Infinity/denormal value */
+    rocblas_status_invalid_solution_index = 14,
 } rocblas_status;
 
 /*! \brief Indicates the precision width of data stored in a blas type. */
@@ -283,7 +284,8 @@ typedef enum rocblas_gemm_flags_
     * tolerate the FP16 matrix instructions flushing subnormal FP16
     * input/output data to zero. See "MI200 (gfx90a) Considerations"
     * section for more details. */
-    rocblas_gemm_flags_fp16_alt_impl = 0x4
+    rocblas_gemm_flags_fp16_alt_impl        = 0x4,
+    rocblas_gemm_flags_check_solution_index = 0x8
 } rocblas_gemm_flags;
 
 /*! \brief Union for representing scalar values */

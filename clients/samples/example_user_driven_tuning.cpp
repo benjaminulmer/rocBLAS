@@ -28,36 +28,6 @@
 #define DIM2 1024
 #define DIM3 1025
 
-template <typename T>
-void mat_mat_mult(T        alpha,
-                  T        beta,
-                  int      M,
-                  int      N,
-                  int      K,
-                  const T* A,
-                  int      As1,
-                  int      As2,
-                  const T* B,
-                  int      Bs1,
-                  int      Bs2,
-                  T*       C,
-                  int      Cs1,
-                  int      Cs2)
-{
-    for(int i1 = 0; i1 < M; i1++)
-    {
-        for(int i2 = 0; i2 < N; i2++)
-        {
-            T t = 0.0;
-            for(int i3 = 0; i3 < K; i3++)
-            {
-                t += A[i1 * As1 + i3 * As2] * B[i3 * Bs1 + i2 * Bs2];
-            }
-            C[i1 * Cs1 + i2 * Cs2] = beta * C[i1 * Cs1 + i2 * Cs2] + alpha * t;
-        }
-    }
-}
-
 int main()
 {
     rocblas_operation transa = rocblas_operation_none, transb = rocblas_operation_transpose;
@@ -66,7 +36,7 @@ int main()
     rocblas_int m = DIM1, n = DIM2, k = DIM3;
     rocblas_int lda, ldb, ldc, size_a, size_b, size_c;
     int         a_stride_1, a_stride_2, b_stride_1, b_stride_2;
-    rocblas_cout << "sgemm example" << std::endl;
+    rocblas_cout << "user driven tuning example" << std::endl;
     if(transa == rocblas_operation_none)
     {
         lda        = m;
@@ -196,76 +166,32 @@ int main()
                                                       ary,
                                                       &size));
 
-    CHECK_ROCBLAS_ERROR(rocblas_gemm_ex(handle,
-                                        transa,
-                                        transb,
-                                        m,
-                                        n,
-                                        k,
-                                        &alpha,
-                                        da,
-                                        type,
-                                        lda,
-                                        db,
-                                        type,
-                                        ldb,
-                                        &beta,
-                                        dc,
-                                        type,
-                                        ldc,
-                                        dc,
-                                        type,
-                                        ldc,
-                                        type,
-                                        rocblas_gemm_algo_standard,
-                                        ary[3],
-                                        0));
+    rocblas_status status = rocblas_gemm_ex(handle,
+                                            transa,
+                                            transb,
+                                            m,
+                                            n,
+                                            k,
+                                            &alpha,
+                                            da,
+                                            type,
+                                            lda,
+                                            db,
+                                            type,
+                                            ldb,
+                                            &beta,
+                                            dc,
+                                            type,
+                                            ldc,
+                                            dc,
+                                            type,
+                                            ldc,
+                                            type,
+                                            rocblas_gemm_algo_standard,
+                                            12,
+                                            rocblas_gemm_flags_check_solution_index);
+    rocblas_cout << status << std::endl;
+    return 0;
 
-    // copy output from device to CPU
-    CHECK_HIP_ERROR(hipMemcpy(hc.data(), dc, sizeof(float) * size_c, hipMemcpyDeviceToHost));
-
-    rocblas_cout << "m, n, k, lda, ldb, ldc = " << m << ", " << n << ", " << k << ", " << lda
-                 << ", " << ldb << ", " << ldc << std::endl;
-
-    float max_relative_error = std::numeric_limits<float>::min();
-
-    // calculate golden or correct result
-    mat_mat_mult<float>(alpha,
-                        beta,
-                        m,
-                        n,
-                        k,
-                        ha.data(),
-                        a_stride_1,
-                        a_stride_2,
-                        hb.data(),
-                        b_stride_1,
-                        b_stride_2,
-                        hc_gold.data(),
-                        1,
-                        ldc);
-
-    for(int i = 0; i < size_c; i++)
-    {
-        float relative_error = (hc_gold[i] - hc[i]) / hc_gold[i];
-        relative_error       = relative_error > 0 ? relative_error : -relative_error;
-        max_relative_error
-            = relative_error < max_relative_error ? max_relative_error : relative_error;
-    }
-    float eps       = std::numeric_limits<float>::epsilon();
-    float tolerance = 10;
-    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
-    {
-        rocblas_cout << "FAIL: max_relative_error = " << max_relative_error << std::endl;
-    }
-    else
-    {
-        rocblas_cout << "PASS: max_relative_error = " << max_relative_error << std::endl;
-    }
-
-    CHECK_HIP_ERROR(hipFree(da));
-    CHECK_HIP_ERROR(hipFree(db));
-    CHECK_HIP_ERROR(hipFree(dc));
-    CHECK_ROCBLAS_ERROR(rocblas_destroy_handle(handle));
     return EXIT_SUCCESS;
 }
