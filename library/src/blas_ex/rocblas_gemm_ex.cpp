@@ -317,8 +317,6 @@ namespace
                                                       rocblas_int*      list_array,
                                                       rocblas_int*      list_size)
     {
-        std::cout << "here" << std::endl;
-
         if(!handle)
             return rocblas_status_invalid_handle;
 

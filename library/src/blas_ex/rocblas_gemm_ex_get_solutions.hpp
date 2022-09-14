@@ -62,6 +62,38 @@ rocblas_status gemm_ex_get_solutions_typecasting(rocblas_handle     handle,
 {
     if(BATCHED)
     {
+        RocblasContractionProblem<Ti, To, Tc> problem{handle,
+                                                      trans_a,
+                                                      trans_b,
+                                                      m,
+                                                      n,
+                                                      k,
+                                                      (const Tc*)alpha,
+                                                      nullptr,
+                                                      (const Ti* const*)a,
+                                                      lda,
+                                                      stride_a,
+                                                      offsetAin,
+                                                      nullptr,
+                                                      (const Ti* const*)b,
+                                                      ldb,
+                                                      stride_b,
+                                                      offsetBin,
+                                                      (const Tc*)beta,
+                                                      nullptr,
+                                                      (const To* const*)c,
+                                                      ldc,
+                                                      stride_c,
+                                                      offsetCin,
+                                                      nullptr,
+                                                      (To* const*)d,
+                                                      ldd,
+                                                      stride_d,
+                                                      offsetDin,
+                                                      batch_count,
+                                                      false,
+                                                      flags};
+        return getAllSolutions(problem, list_array, list_size);
     }
     else
     {

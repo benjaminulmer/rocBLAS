@@ -141,6 +141,7 @@ int main()
     rocblas_datatype type = rocblas_datatype_f32_r;
     rocblas_initialize();
 
+    rocblas_int size;
     CHECK_ROCBLAS_ERROR(rocblas_gemm_ex_get_solutions(handle,
                                                       transa,
                                                       transb,
@@ -165,8 +166,61 @@ int main()
                                                       rocblas_gemm_algo_standard,
                                                       0,
                                                       NULL,
-                                                      NULL));
-    rocblas_cout << "back to caller" << std::endl;
+                                                      &size));
+    rocblas_cout << size << std::endl;
+
+    rocblas_int* ary = new rocblas_int[size];
+    CHECK_ROCBLAS_ERROR(rocblas_gemm_ex_get_solutions(handle,
+                                                      transa,
+                                                      transb,
+                                                      m,
+                                                      n,
+                                                      k,
+                                                      &alpha,
+                                                      da,
+                                                      type,
+                                                      lda,
+                                                      db,
+                                                      type,
+                                                      ldb,
+                                                      &beta,
+                                                      dc,
+                                                      type,
+                                                      ldc,
+                                                      dc,
+                                                      type,
+                                                      ldc,
+                                                      type,
+                                                      rocblas_gemm_algo_standard,
+                                                      0,
+                                                      ary,
+                                                      &size));
+
+    CHECK_ROCBLAS_ERROR(rocblas_gemm_ex(handle,
+                                        transa,
+                                        transb,
+                                        m,
+                                        n,
+                                        k,
+                                        &alpha,
+                                        da,
+                                        type,
+                                        lda,
+                                        db,
+                                        type,
+                                        ldb,
+                                        &beta,
+                                        dc,
+                                        type,
+                                        ldc,
+                                        dc,
+                                        type,
+                                        ldc,
+                                        type,
+                                        rocblas_gemm_algo_standard,
+                                        ary[3],
+                                        0));
+
     // copy output from device to CPU
     CHECK_HIP_ERROR(hipMemcpy(hc.data(), dc, sizeof(float) * size_c, hipMemcpyDeviceToHost));
 

@@ -924,21 +924,27 @@ rocblas_status getAllSolutions(const RocblasContractionProblem<Ti, To, Tc>& prob
         std::shared_ptr<Tensile::Hardware>                                           hardware;
 
         auto& adapter = get_library_and_adapter(&library, &deviceProp, prob.handle->getDevice());
-
-        hardware = Tensile::hip::GetDevice(*deviceProp);
-
+        hardware      = Tensile::hip::GetDevice(*deviceProp);
         auto tensile_prob = ConstructTensileProblem(prob);
-        auto handle       = prob.handle;
 
         solutions = library->findAllSolutions(tensile_prob, *hardware);
 
-        std::cout << "sol indices:" << std::endl;
-        for(auto const& sol : solutions)
+        if(list_array == nullptr)
         {
-            std::cout << sol->index << std::endl;
+            *list_size = solutions.size();
+        }
+        else
+        {
+            rocblas_int i  = 0;
+            auto        it = solutions.begin();
+            while(i < *list_size && it != solutions.end())
+            {
+                list_array[i] = it->get()->index;
+                ++i;
+            }
         }
     }
-    catch(...)
+    catch(...) // TODO error message
     {
         rocblas_internal_ostream msg;
         print_once(msg << "\nrocBLAS error: "
