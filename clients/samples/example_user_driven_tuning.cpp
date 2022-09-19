@@ -43,7 +43,6 @@ int main()
         size_a     = k * lda;
         a_stride_1 = 1;
         a_stride_2 = lda;
-        rocblas_cout << "N";
     }
     else
     {
@@ -51,7 +50,6 @@ int main()
         size_a     = m * lda;
         a_stride_1 = lda;
         a_stride_2 = 1;
-        rocblas_cout << "T";
     }
     if(transb == rocblas_operation_none)
     {
@@ -59,7 +57,6 @@ int main()
         size_b     = n * ldb;
         b_stride_1 = 1;
         b_stride_2 = ldb;
-        rocblas_cout << "N: ";
     }
     else
     {
@@ -67,7 +64,6 @@ int main()
         size_b     = k * ldb;
         b_stride_1 = ldb;
         b_stride_2 = 1;
-        rocblas_cout << "T: ";
     }
     ldc    = m;
     size_c = n * ldc;
@@ -111,87 +107,35 @@ int main()
     rocblas_datatype type = rocblas_datatype_f32_r;
     rocblas_initialize();
 
+#define GEMM_EX_ARGS                                                                             \
+    handle, transa, transb, m, n, k, &alpha, da, type, lda, db, type, ldb, &beta, dc, type, ldc, \
+        dc, type, ldc, type, rocblas_gemm_algo_standard
+#define rocblas_gemm_exM(...) rocblas_gemm_ex(__VA_ARGS__)
+
+    // Get number of solutions
     rocblas_int size;
-    CHECK_ROCBLAS_ERROR(rocblas_gemm_ex_get_solutions(handle,
-                                                      transa,
-                                                      transb,
-                                                      m,
-                                                      n,
-                                                      k,
-                                                      &alpha,
-                                                      da,
-                                                      type,
-                                                      lda,
-                                                      db,
-                                                      type,
-                                                      ldb,
-                                                      &beta,
-                                                      dc,
-                                                      type,
-                                                      ldc,
-                                                      dc,
-                                                      type,
-                                                      ldc,
-                                                      type,
-                                                      rocblas_gemm_algo_standard,
-                                                      0,
-                                                      NULL,
-                                                      &size));
+    CHECK_ROCBLAS_ERROR(
+        rocblas_gemm_ex_get_solutions(GEMM_EX_ARGS, rocblas_gemm_flags_none, NULL, &size));
     rocblas_cout << size << std::endl;
 
+    // Fill array with list of solutions
     rocblas_int* ary = new rocblas_int[size];
-    CHECK_ROCBLAS_ERROR(rocblas_gemm_ex_get_solutions(handle,
-                                                      transa,
-                                                      transb,
-                                                      m,
-                                                      n,
-                                                      k,
-                                                      &alpha,
-                                                      da,
-                                                      type,
-                                                      lda,
-                                                      db,
-                                                      type,
-                                                      ldb,
-                                                      &beta,
-                                                      dc,
-                                                      type,
-                                                      ldc,
-                                                      dc,
-                                                      type,
-                                                      ldc,
-                                                      type,
-                                                      rocblas_gemm_algo_standard,
-                                                      0,
-                                                      ary,
-                                                      &size));
+    CHECK_ROCBLAS_ERROR(
+        rocblas_gemm_ex_get_solutions(GEMM_EX_ARGS, rocblas_gemm_flags_none, ary, &size));
 
-    rocblas_status status = rocblas_gemm_ex(handle,
-                                            transa,
-                                            transb,
-                                            m,
-                                            n,
-                                            k,
-                                            &alpha,
-                                            da,
-                                            type,
-                                            lda,
-                                            db,
-                                            type,
-                                            ldb,
-                                            &beta,
-                                            dc,
-                                            type,
-                                            ldc,
-                                            dc,
-                                            type,
-                                            ldc,
-                                            type,
-                                            rocblas_gemm_algo_standard,
-                                            12,
-                                            rocblas_gemm_flags_check_solution_index);
-    rocblas_cout << status << std::endl;
-    return 0;
+    // Check if solution is valid for problem (fail case)
+    rocblas_status check_fail
+        = rocblas_gemm_exM(GEMM_EX_ARGS, 12, rocblas_gemm_flags_check_solution_index);
+    rocblas_cout << check_fail << std::endl;
+
+    // Check if solution is valid for problem (success case)
+    rocblas_status check_success
+        = rocblas_gemm_exM(GEMM_EX_ARGS, ary[0], rocblas_gemm_flags_check_solution_index);
+    rocblas_cout << check_success << std::endl;
+
+    // Solve using solution
+    CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, ary[0], rocblas_gemm_flags_none));
+    CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, 0, rocblas_gemm_flags_none));
 
     return EXIT_SUCCESS;
 }
