@@ -855,6 +855,12 @@ rocblas_status runContractionProblem(const RocblasContractionProblem<Ti, To, Tc>
         if(solution_index > 0)
         {
             solution = library->getSolutionByIndex(solution_index - 1);
+            // load solution if not already loaded
+            if(!solution)
+            {
+                library->findAllSolutions(tensile_prob, *hardware);
+                solution = library->getSolutionByIndex(solution_index - 1);
+            }
         }
         else
         {
@@ -863,9 +869,16 @@ rocblas_status runContractionProblem(const RocblasContractionProblem<Ti, To, Tc>
 
         if(!solution)
         {
-            rocblas_internal_ostream msg;
-            print_once(msg << "\nrocBLAS error: No Tensile solution found for " << prob);
-            status = rocblas_status_not_implemented;
+            if(solution_index > 0)
+            {
+                status = rocblas_status_invalid_solution_index;
+            }
+            else
+            {
+                rocblas_internal_ostream msg;
+                print_once(msg << "\nrocBLAS error: No Tensile solution found for " << prob);
+                status = rocblas_status_not_implemented;
+            }
         }
         else
         {
