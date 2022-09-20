@@ -24,12 +24,17 @@
 #include "utility.hpp"
 #include <hip/hip_runtime.h>
 
-#define DIM1 1023
-#define DIM2 1024
-#define DIM3 1025
+#include <chrono>
+#include <map>
+
+#define DIM1 64
+#define DIM2 64
+#define DIM3 10024
 
 int main()
 {
+    rocblas_int       cold_calls = 1;
+    rocblas_int       hot_calls  = 1;
     rocblas_operation transa = rocblas_operation_none, transb = rocblas_operation_transpose;
     float             alpha = 1.1, beta = 0.9;
 
@@ -105,8 +110,8 @@ int main()
     CHECK_ROCBLAS_ERROR(rocblas_create_handle(&handle));
 
     rocblas_datatype type = rocblas_datatype_f32_r;
-    rocblas_initialize();
 
+    // macros
 #define GEMM_EX_ARGS                                                                             \
     handle, transa, transb, m, n, k, &alpha, da, type, lda, db, type, ldb, &beta, dc, type, ldc, \
         dc, type, ldc, type, rocblas_gemm_algo_standard
@@ -116,25 +121,57 @@ int main()
     rocblas_int size;
     CHECK_ROCBLAS_ERROR(
         rocblas_gemm_ex_get_solutions(GEMM_EX_ARGS, rocblas_gemm_flags_none, NULL, &size));
-    rocblas_cout << size << std::endl;
+    rocblas_cout << size << " solution(s) found" << std::endl;
 
     // Fill array with list of solutions
     rocblas_int* ary = new rocblas_int[size];
     CHECK_ROCBLAS_ERROR(
         rocblas_gemm_ex_get_solutions(GEMM_EX_ARGS, rocblas_gemm_flags_none, ary, &size));
 
+    // Example basic benchmark loop
+    double      bestTime = std::numeric_limits<double>::max();
+    rocblas_int bestSol  = -1;
+    for(rocblas_int i = 0; i < size; ++i)
+    {
+        rocblas_int sol = ary[i];
+        // warmup
+        for(rocblas_int cc = 0; cc < cold_calls; ++cc)
+        {
+            CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, sol, rocblas_gemm_flags_none));
+        }
+        hipStream_t stream;
+        CHECK_ROCBLAS_ERROR(rocblas_get_stream(handle, &stream));
+        double time = get_time_us_sync(stream); // in microseconds
+
+        // timing loop
+        for(rocblas_int hc = 0; hc < hot_calls; ++hc)
+        {
+            CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, sol, rocblas_gemm_flags_none));
+        }
+        time = get_time_us_sync(stream) - time;
+        rocblas_cout << "Sol " << sol << ": " << time << " us" << std::endl;
+
+        // track winner
+        if(time < bestTime)
+        {
+            bestSol  = sol;
+            bestTime = time;
+        }
+    }
+    rocblas_cout << "Winner: " << bestSol << " in " << bestTime << " us" << std::endl;
+
     // Check if solution is valid for problem (fail case)
-    rocblas_status check_fail
-        = rocblas_gemm_exM(GEMM_EX_ARGS, 12, rocblas_gemm_flags_check_solution_index);
-    rocblas_cout << check_fail << std::endl;
+    rocblas_status check_fail = rocblas_gemm_exM(GEMM_EX_ARGS, 12, rocblas_gemm_flags_none);
+    assert(check_fail == rocblas_status_invalid_solution_index);
 
     // Check if solution is valid for problem (success case)
-    rocblas_status check_success
-        = rocblas_gemm_exM(GEMM_EX_ARGS, ary[0], rocblas_gemm_flags_check_solution_index);
-    rocblas_cout << check_success << std::endl;
+    CHECK_ROCBLAS_ERROR(
+        rocblas_gemm_exM(GEMM_EX_ARGS, bestSol, rocblas_gemm_flags_check_solution_index));
 
-    // Solve using solution
-    CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, ary[0], rocblas_gemm_flags_none));
+    // Solve using winner
+    CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, bestSol, rocblas_gemm_flags_none));
+
+    // Solve using default solution
     CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, 0, rocblas_gemm_flags_none));
 
     return EXIT_SUCCESS;

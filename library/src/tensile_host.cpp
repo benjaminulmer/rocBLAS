@@ -958,7 +958,8 @@ rocblas_status getAllSolutions(const RocblasContractionProblem<Ti, To, Tc>& prob
             auto        it = solutions.begin();
             while(i < *list_size && it != solutions.end())
             {
-                list_array[i] = it->get()->index;
+                list_array[i] = it->get()->index + 1;
+                ++it;
                 ++i;
             }
         }
